@@ -1,0 +1,107 @@
+#include <Servo.h>
+Servo servo1;
+Servo servo2;
+Servo servo3;
+Servo servo4;
+Servo servo5;
+
+String serv_up = "";
+byte parseStart = 0;
+
+
+void setup() {
+  Serial.begin(9600);
+  servo1.attach(10);
+  servo2.attach(11);
+  servo3.attach(9);
+  servo4.attach(8);
+  servo5.attach(7); 
+}
+
+void loop() 
+{
+  if (Serial.available())
+  {   
+    char in = Serial.read();
+    if (!(in == '\n' || in == '\r'))      //  отсеиваем символы возврата картеки и переноса строки
+    {
+      switch (in)       // в зависимости от принятого символа, делаем выбор
+      {
+        case '#': parseStart = 1;  break;     // начало сообщения 
+        case ';': parseStart = 2;  break;     //  конец сообщения 
+      }
+
+      // если парсинг запущен и это не символы начала или окончания посылки
+      if ((parseStart == 1) && (in != '#')) 
+      {  
+        serv_up += in;    // запоминаем переданное число (складываем по одному байту в общую строку)
+        
+      }
+    
+      if(parseStart == 2)   //  если прием остановлен
+      {
+        int message = serv_up.toInt();
+
+        if (message == 0)
+        {
+          servo1.write(0); //палец поднимается
+          serv_up = "";
+        }
+        
+        else if (message == 1)
+        {
+          servo1.write(180);  // палец опускается
+          serv_up = "";
+        }
+
+        else if (message == 2)
+        {
+          servo2.write(0);  // палец 2 поднимается
+          serv_up = "";
+        }        
+        
+        else if (message == 3)
+        {
+          servo2.write(180);  // палец 2 опускается
+          serv_up = "";
+        }
+        else if (message == 4)
+        {
+          servo3.write(0);  // палец 3 поднимается
+          serv_up = "";
+        }
+
+        else if (message == 5)
+        {
+          servo3.write(180);  // палец 3 опускается
+          serv_up = "";
+        }
+        
+        else if (message == 6)
+        {
+          servo4.write(0);  // палец 4 поднимается
+          serv_up = "";
+        }
+
+        else if (message == 7)
+        {
+          servo4.write(180);  // палец 4 опускается
+          serv_up = "";
+        }
+
+        else if (message == 8)
+        {
+          servo5.write(0);  // палец 5 поднимается
+          serv_up = "";
+        }
+
+        else if (message == 9)
+        {
+          servo5.write(180);  // палец 5 опускается
+          serv_up = "";
+        } 
+        
+      } 
+    }
+  } 
+}
