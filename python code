@@ -1,0 +1,86 @@
+import cv2
+import mediapipe as mp
+import serial
+
+def distance(point1, point2):
+    return abs(point1 - point2)
+
+def change_control_up(s, finger, i, x):
+    global servo
+    if finger == 1:
+        print(f'палец {i} поднят')
+        if s == 0:
+            print(f'положение пальца {i} изменилось')
+            servo = '#' + str(x) + ';'
+        s = 1
+    if servo == '#' + str(x) + ';':
+        servo = bytes(servo, 'utf-8')
+        uart.write(servo)
+        print(servo)
+    return s
+
+def change_control_down(s, finger, i, y):
+    global servo
+    if finger == 0:
+        print(f'палец {i} опущен')
+        if s == 1:
+            print(f'положение пальца {i} изменилось')
+            servo = '#' + str(y) + ';'
+        s = 0
+
+    if servo == '#' + str(y) + ';':
+        servo = bytes(servo, 'utf-8')
+        uart.write(servo)
+        print(servo)
+    return s
+
+if __name__ == '__main__':
+
+    s1, s2, s3, s4, s5 = (3,) * 5
+    servo = ''
+    camera = cv2.VideoCapture(0)
+    mpHands = mp.solutions.hands  # подключаем алгоритмы поиска рук
+    hands = mpHands.Hands()  # объект "руки" с настройками
+    mpDraw = mp.solutions.drawing_utils  # утилиты для рисования
+    portNo = 'COM3'
+    uart = serial.Serial(portNo, 9600)
+
+    p = [0 for i in range(21)]
+    finger = [0 for i in range(5)]
+
+    while True:
+        good, img = camera.read()  # получает один кадр из видео
+        imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # задает цветовой профиль RGB
+
+        results = hands.process(imgRGB)  # поиск рук в кадре
+        if results.multi_hand_landmarks:  # подключаем точки на руке
+            for handLms in results.multi_hand_landmarks:
+                mpDraw.draw_landmarks(img, handLms, mp.solutions.hands.HAND_CONNECTIONS)  # нарисовать по точкам
+
+                for id, point in enumerate(handLms.landmark):  # получить индекс элемента и значение
+                    width, height, color = img.shape
+                    width, height = int(point.x * height), int(point.y * width)
+                    p[id] = height
+
+                distanceGood = distance(p[0], p[5]) + (distance(p[0], p[5]) / 2)
+                distanceGood_4 = distance(p[0], p[17]) + (distance(p[0], p[17]) / 2)
+                finger[1] = 1 if distance(p[0], p[8]) > distanceGood else 0
+                finger[2] = 1 if distance(p[0], p[12]) > distanceGood else 0
+                finger[3] = 1 if distance(p[0], p[16]) > distanceGood else 0
+                finger[4] = 1 if distance(p[0], p[20]) > distanceGood_4 else 0
+                finger[0] = 1 if distance(p[4], p[17]) > distanceGood else 0
+
+                s1 = change_control_up(s1, finger[1], 1, 0)
+                s1 = change_control_down(s1, finger[1], 1, 1)
+                s2 = change_control_up(s2, finger[2], 2, 2)
+                s2 = change_control_down(s2, finger[2], 2, 3)
+                s3 = change_control_up(s3, finger[3], 3, 4)
+                s3 = change_control_down(s3, finger[3], 3, 5)
+                s4 = change_control_up(s4, finger[4], 4, 6)
+                s4 = change_control_down(s4, finger[4], 4, 7)
+                #s5 = change_control_up(s5, finger[0], 5, 8)
+                #s5 = change_control_down(s5, finger[0], 5, 9)
+
+        cv2.imshow("Image", img)  # открывает окно и выводит кадр
+        if cv2.waitKey(1) == ord('q'):  # ждет нажатия клавиши
+            break
